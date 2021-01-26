@@ -212,6 +212,7 @@ def run_button_clicked_new(n,folders,thresh,warn,ignore,alt,alt_thresh,multi,typ
                 options["frame_paths"].append(fpath)
             print("frame paths in job", options["frame_paths"])
             job = Job(options, db_helper)
+            options["frame_paths"]=[]
             #current_job = job
             if sheet:
                 for folder in job.frame_ls:

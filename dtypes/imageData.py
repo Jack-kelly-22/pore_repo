@@ -68,7 +68,7 @@ class ImageData:
         max_pts = []
         pts = []
         image_data = io.imread(path)
-        #gausian = gaussian_filter(image_data,sigma=3)
+        gausian = gaussian_filter(image_data,sigma=1)
         #image = resize(gausian,(600,800))
         image=resize(image_data, dsize =(800,600), interpolation = cv2.INTER_CUBIC)
         #image = area_utils.get_adjusted_image(image)
