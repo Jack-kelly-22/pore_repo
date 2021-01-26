@@ -10,7 +10,7 @@ import os
 from scipy.ndimage.filters import gaussian_filter
 import matplotlib.pyplot as plt
 import skimage
-from skimage.transform import rescale,resize
+from skimage.transform import rescale #resize
 class ImageData:
     def __init__(self,jname,frame,path,const, db_ref,):
         #create unique identifier for imagedata object in db
@@ -68,14 +68,14 @@ class ImageData:
         max_pts = []
         pts = []
         image_data = io.imread(path)
-        gausian = gaussian_filter(image_data,sigma=3)
-        image = resize(gausian,(600,800))
-        #image=resize(image_data, dsize =(800,600), interpolation = cv2.INTER_CUBIC)
+        #gausian = gaussian_filter(image_data,sigma=3)
+        #image = resize(gausian,(600,800))
+        image=resize(image_data, dsize =(800,600), interpolation = cv2.INTER_CUBIC)
         #image = area_utils.get_adjusted_image(image)
         image_utils.save_out_image(image,self.image_out_path_og)
         #if const["crop"]!= 0:
         #    image = image[:-const['crop'],:-const['crop']]
-        #image = area_utils.adjust_exposure(image)
+        image = area_utils.adjust_exposure(image)
         self.img_seg = area_utils.get_thresh_image(image,const)
         self.img_grid,pore_grid,z_pore= data_utils.split_up_image(self.img_seg,4)
         self.heat_out_path = data_utils.get_porosity_heatmap(self.name,self.img_seg,pore_grid,self.path)
