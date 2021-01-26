@@ -41,9 +41,14 @@ def update_view_image(path):
     }
     img_np_out = io.imread(path)
     img_np_in = io.imread(path[:-6] +'g.png')
-    heat_img = io.imread(path[:-8] + "_pore_heatmap.png")
-    heat_diff = io.imread(path[:-8] + "_pore_diff_heatmap.png")
-    heat_ls = [heat_img,heat_diff]
+
+    heat_ls = []
+    if(os.path.isfile(path[:-8] + "_pore_heatmap.png")):
+        heat_img = io.imread(path[:-8] + "_pore_heatmap.png")
+        heat_ls.append(heat_img)
+    if (os.path.isfile(path[:-8] + "_pore_diff_heatmap.png")):
+        heat_diff = io.imread(path[:-8] + "_pore_diff_heatmap.png")
+        heat_ls.append(heat_diff)
     heat_row_child =[]
 
     for heat in heat_ls:
