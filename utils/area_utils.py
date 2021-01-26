@@ -1,6 +1,8 @@
 from skimage.segmentation import chan_vese
 from numpy import percentile,histogram,linalg,copy
 import cv2
+import time
+import matplotlib.pyplot as plt
 from skimage import exposure
 from skimage.filters import gaussian,threshold_isodata
 from skimage.color import rgb2gray
@@ -15,7 +17,16 @@ from pandas import DataFrame
 from skimage.filters import threshold_sauvola,threshold_local,threshold_otsu
 from skimage.filters.rank import enhance_contrast_percentile
 from PIL import ImageEnhance
+import numpy as np
+from scipy.ndimage.filters import gaussian_filter
+import matplotlib.pyplot as plt
+import skimage
+from skimage.data import coins
+from skimage.transform import rescale
 
+from sklearn.feature_extraction import image as img2
+from sklearn.cluster import spectral_clustering
+from sklearn.utils.fixes import parse_version
 
 def adjust_exposure(image,lower = 1, high = 99):
     p2,p98 = percentile(image,(lower,high))
@@ -99,18 +110,58 @@ def get_thresh_image(image, constants):
     return img_seg
 
 
+def get_adjusted_image(image):
+    image = tfImage.adjust_contrast(image, 1.5)
+    return image
+
+
+def try_ML(image):
+    # Convert the image into a graph with the value of the gradient on the
+    # edges.
+    graph = img2.img_to_graph(image)
+
+    # Take a decreasing function of the gradient: an exponential
+    # The smaller beta is, the more independent the segmentation is of the
+    # actual image. For beta=1, the segmentation is close to a voronoi
+    beta = 10
+    eps = 1e-6
+    graph.data = np.exp(-beta * graph.data / graph.data.std()) + eps
+
+    # Apply spectral clustering (this step goes much faster if you have pyamg
+    # installed)
+    N_REGIONS = 25
+    for assign_labels in ('kmeans', 'discretize'):
+        t0 = time.time()
+        labels = spectral_clustering(graph, n_clusters=N_REGIONS,
+                                     assign_labels=assign_labels, random_state=42)
+        t1 = time.time()
+        labels = labels.reshape((800,600))
+
+        plt.figure(figsize=(5, 5))
+        plt.imshow(image, cmap=plt.cm.gray)
+        for l in range(N_REGIONS):
+            plt.contour(labels == l,
+                        colors=[plt.cm.nipy_spectral(l / float(N_REGIONS))])
+        plt.xticks(())
+        plt.yticks(())
+        title = 'Spectral clustering: %s, %.2fs' % (assign_labels, (t1 - t0))
+        print(title)
+        plt.title(title)
+    #plt.show()
+
+
 def get_alt_thresh_image(image,alt_thresh,fiber):
 
     #image = tfImage.adjust_saturation(image,2.6)
     #image = tfImage.adjust_contrast(image,0.7)
-
+    image = tfImage.adjust_contrast(image, 1.5)
     image = rgb2gray(image)
 
 
     #image = exposure.rescale_intensity(image)
     #image = enhance_contrast_percentile(image,disk(radius=3),p0=.1, p1=.9)
     #tr = threshold_local(image, 101, 'mean', offset=-(alt_thresh/255.0))
-    tr = threshold_local(image, 101,'mean', mode= 'constant', cval=0, offset=-(alt_thresh / 255.0))
+    tr = threshold_local(image, 301,'mean', mode= 'constant', cval=0, offset=-(alt_thresh / 255.0))
     
     #print("fiber is ", fiber)
     if fiber == 'dark':
@@ -120,6 +171,7 @@ def get_alt_thresh_image(image,alt_thresh,fiber):
         print("light fibers")
         img_seg = (image < tr).astype(uint8)
     window_size = 25
+    #plt.imshow(img_seg)
 
     return img_seg
 
@@ -136,7 +188,7 @@ def get_alt_thresh_image(image,alt_thresh,fiber):
 def get_reg_thresh_image(image, threshold,fiber):
     #print(image)
     #image = gaussian(image,0.7)
-    #image = tfImage.adjust_contrast(image,1.5)
+    image = tfImage.adjust_contrast(image,1.5)
     image = rgb2gray(image)
     if fiber == 'dark':
         #threshold = threshold_isodata(image,nbins=16,)

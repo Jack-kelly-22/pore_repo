@@ -7,6 +7,10 @@ from utils import image_utils, area_utils,data_utils
 from dtypes.db_helper import Db_helper
 from skimage import io
 import os
+from scipy.ndimage.filters import gaussian_filter
+import matplotlib.pyplot as plt
+import skimage
+from skimage.transform import rescale,resize
 class ImageData:
     def __init__(self,jname,frame,path,const, db_ref,):
         #create unique identifier for imagedata object in db
@@ -64,8 +68,10 @@ class ImageData:
         max_pts = []
         pts = []
         image_data = io.imread(path)
-
-        image=resize(image_data, dsize =(800,600), interpolation = cv2.INTER_CUBIC)
+        gausian = gaussian_filter(image_data,sigma=3)
+        image = resize(gausian,(600,800))
+        #image=resize(image_data, dsize =(800,600), interpolation = cv2.INTER_CUBIC)
+        #image = area_utils.get_adjusted_image(image)
         image_utils.save_out_image(image,self.image_out_path_og)
         #if const["crop"]!= 0:
         #    image = image[:-const['crop'],:-const['crop']]
@@ -76,6 +82,7 @@ class ImageData:
         self.heat_diff_out_path = data_utils.get_diff_heatmap(self.name, self.img_seg, pore_grid, self.path)
         #data_utils.get_intensity_heatmap(self.name, self.img_seg, z_pore)
         #calculate porosity
+        #area_utils.try_ML(image)
         self.porosity = area_utils.get_porosity(self.img_seg)
         print(self.porosity)
         label_image = label(self.img_seg)
