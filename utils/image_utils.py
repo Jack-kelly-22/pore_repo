@@ -22,7 +22,7 @@ def color_out_image(regions,image,multi):
             #r,g,b = 183,255,15
             r,g,b = 23,162,25
 
-
+        #if(len(reg.coords)>50):
         set_color(image, (array(y_ls),array(x_ls)), color =(r,g,b))
     return image
 

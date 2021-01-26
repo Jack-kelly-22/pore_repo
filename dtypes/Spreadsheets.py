@@ -194,18 +194,14 @@ class Spreadsheet:
         og_img = Image('.' +im_dat.image_out_path_og)
         thresh_img = Image('.' + im_dat.image_out_path)
         heat_img = Image('.' + im_dat.heat_out_path)
-        og_img.anchor = 'G' + str(i)
-        thresh_img.anchor = 'K' + str(i)
-        heat_img.anchor = 'P' + str(i)
-        og_img.height = 300
-        og_img.width = 400
-        thresh_img.height = 300
-        thresh_img.width = 400
-        heat_img.height = 300
-        heat_img.width = 400
-        self.page.add_image(og_img)
-        self.page.add_image(thresh_img)
-        self.page.add_image(heat_img)
+        heat_diff = Image('.' + im_dat.heat_diff_out_path)
+        image_ls =[og_img,thresh_img,heat_img,heat_diff]
+        anchor_ls =["G","K","P","U"]
+        for j in range(len(image_ls)):
+            image_ls[j].anchor = anchor_ls[j] + str(i)
+            image_ls[j].height = 300
+            image_ls[j].width = 400
+            self.page.add_image(image_ls[j])
 
         #self.i = self.i + 15
 

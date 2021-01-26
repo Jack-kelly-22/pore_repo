@@ -59,8 +59,8 @@ def get_job_fetch_str():
         return s
 
 def get_img_post_str():
-        s = ''' insert into image_output(img_id,img_name,img_path,pores,areas,all_areas,largest_holes,heat_img_path)
-                           VALUES(?,?,?,?,?,?,?,?)'''
+        s = ''' insert into image_output(img_id,img_name,img_path,pores,areas,all_areas,largest_holes,heat_img_path,heat_diff_path)
+                           VALUES(?,?,?,?,?,?,?,?,?)'''
         return s
 
 def get_jobs_fetch_str():
@@ -112,7 +112,8 @@ def empty_frame_dic():
                 "hist_area_img_path":'',
                 "hist_diam_img_path":'',
                 "disk_area_img_path" : '',
-                "disk_pore_img_path":''
+                "disk_pore_img_path":'',
+
         }
         return f_dat
 
@@ -126,6 +127,7 @@ def empty_img_dic():
                 "img_largest_areas": [],
                 "all_areas": None,
                 "largest_holes": [],
-                "heat_img_path":""
+                "heat_img_path":"",
+                "heat_diff_path":''
         }
         return im_dat

@@ -11,7 +11,7 @@ options = default_settings.get_default_options()
 options['job_name'] = 'spread-tester'
 const = get_default_constants()
 print("path in frame_test",os.listdir())
-const = update_constants(const,200,"dark",2000,20,False,55, True,50)
+const = update_constants(const,130,"dark",2000,20,False,55, False,50)
 const['num_circles'] = 20
 options['constants'] = const
 

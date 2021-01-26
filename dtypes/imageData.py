@@ -46,6 +46,7 @@ class ImageData:
         self.all_areas = []
         self.coords = []
         self.histogram = None
+        self.heat_diff_out_path ='imageData.py'
         #this should be opened(no need to open or close)
         self.db_ref = db_ref
         self.compute_image(path,const)
@@ -72,6 +73,7 @@ class ImageData:
         self.img_seg = area_utils.get_thresh_image(image,const)
         self.img_grid,pore_grid,z_pore= data_utils.split_up_image(self.img_seg,4)
         self.heat_out_path = data_utils.get_porosity_heatmap(self.name,self.img_seg,pore_grid,self.path)
+        self.heat_diff_out_path = data_utils.get_diff_heatmap(self.name, self.img_seg, pore_grid, self.path)
         #data_utils.get_intensity_heatmap(self.name, self.img_seg, z_pore)
         #calculate porosity
         self.porosity = area_utils.get_porosity(self.img_seg)

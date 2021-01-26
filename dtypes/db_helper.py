@@ -34,8 +34,10 @@ class Db_helper:
             # im_dat["all_areas"] = row[5]
             im_dat["largest_holes"] = row[6]
             print("so:",type(row[6]))
-            if(len(row)>7):
+            if len(row)>7:
                 im_dat['heat_img_path']= str(row[7])
+            if len(row)>8:
+                im_dat['heat_diff_path'] = str(row[8])
 
             #print("ls type", type(row[4]))
             # fix this later ^^^^!!!
@@ -146,10 +148,8 @@ class Db_helper:
                                     array(img.largest_areas),
                                     array(img.all_areas),
                                     array(img.largest_holes),
-                                    img.heat_out_path
-
-                                    #asarray(img.largest_holes)
-                                    #img.histogram.to_sql()
+                                    img.heat_out_path,
+                                    img.heat_diff_out_path
                                     ))
         conn.commit()
         print("image data post...")

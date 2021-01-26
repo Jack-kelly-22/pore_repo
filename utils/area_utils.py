@@ -2,11 +2,13 @@ from skimage.segmentation import chan_vese
 from numpy import percentile,histogram,linalg,copy
 import cv2
 from skimage import exposure
+from skimage.filters import gaussian,threshold_isodata
 from skimage.color import rgb2gray
 from numpy import uint8
 from porespy.metrics import porosity
 from utils import coord_utils
 from skimage.draw import disk
+from utils import data_utils
 from tensorflow import image as tfImage
 from utils.filters_utils import scalar_transform
 from pandas import DataFrame
@@ -100,7 +102,7 @@ def get_thresh_image(image, constants):
 def get_alt_thresh_image(image,alt_thresh,fiber):
 
     #image = tfImage.adjust_saturation(image,2.6)
-    #image = tfImage.adjust_contrast(image,3)
+    #image = tfImage.adjust_contrast(image,0.7)
 
     image = rgb2gray(image)
 
@@ -121,14 +123,24 @@ def get_alt_thresh_image(image,alt_thresh,fiber):
 
     return img_seg
 
+# def get_split_thresh_image(image,threshold):
+#     image = rgb2gray(image)
+#     img_grid,pore_grid,z_pore_grid = data_utils.split_up_image(image,num=3)
+#     for i in range(len(img_grid)):
+#         for j in range(len(img_grid[i])):
+#             thresh = threshold * z_pore_grid[i][j]
+#             img_seg = (image > threshold).astype(uint8)
+#
 
 
 def get_reg_thresh_image(image, threshold,fiber):
     #print(image)
-    image = tfImage.adjust_contrast(image, 2)
+    #image = gaussian(image,0.7)
+    #image = tfImage.adjust_contrast(image,1.5)
     image = rgb2gray(image)
     if fiber == 'dark':
-        print("thres:", threshold)
+        #threshold = threshold_isodata(image,nbins=16,)
+        #img_seg = (image > threshold).astype(uint8)
         img_seg = (image > threshold/255).astype(uint8)
         #img_seg = get_alt_thresh_image(img_seg, 30, fiber)
     else:

@@ -42,9 +42,24 @@ def update_view_image(path):
     img_np_out = io.imread(path)
     img_np_in = io.imread(path[:-6] +'g.png')
     heat_img = io.imread(path[:-8] + "_pore_heatmap.png")
+    heat_diff = io.imread(path[:-8] + "_pore_diff_heatmap.png")
+    heat_ls = [heat_img,heat_diff]
+    heat_row_child =[]
+
+    for heat in heat_ls:
+        fig = px.imshow(heat,template="plotly_dark")
+        fig.update_layout(dragmode="zoom",
+           autosize=False,
+           margin=dict(l=0, r=0, b=0, t=10, pad=2),
+           width=450,
+           height=300
+        )
+        graph = dcc.Graph(id="heat-graph", figure=fig, config=graph_config)
+        heat_row_child.append(graph)
+    heat_row = dbc.Row(children=heat_row_child)
+
     out_fig = px.imshow(img_np_out,template="plotly_dark" )
     og_fig = px.imshow(img_np_in, template="plotly_dark")
-    heat_fig = px.imshow(heat_img,template="plotly_dark")
     out_fig.update_layout(dragmode="zoom",
                       autosize=False,
                       margin=dict(l=0, r=0, b=0, t=10, pad=2),
@@ -58,20 +73,10 @@ def update_view_image(path):
                           width=900,
                           height=600
                           )
-
-
-    heat_fig.update_layout(dragmode="zoom",
-                          autosize=False,
-                          margin=dict(l=0, r=0, b=0, t=10, pad=2),
-                          width=900,
-                          height=600
-                          )
-
     out_img = dcc.Graph(id="image-graph", figure=out_fig, config=graph_config)
     in_img = dcc.Graph(id="image-graph", figure=og_fig, config=graph_config)
-    heat = dcc.Graph(id="heat-graph", figure=heat_fig, config=graph_config)
 
-    col = dbc.Col([out_img,heat,in_img])
+    col = dbc.Col([out_img,in_img,heat_row])
     return col
 
 

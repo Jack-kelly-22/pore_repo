@@ -137,7 +137,7 @@ def get_histogram(areas,scale,ignore=20):
 
 
 def get_porosity_heatmap(img_name,img_grid,pore_grid,path):
-    #plt.clf()
+    plt.clf()
     plt.title("Porosity of " + img_name)
 
     #cols = range(0,800,int(800/len(img_grid[1])))
@@ -152,10 +152,44 @@ def get_porosity_heatmap(img_name,img_grid,pore_grid,path):
                     cbarlabel="Porosity")
     text = annotate_heatmap(pore_im,valfmt="{x:.2f}")
     plt.savefig('.'+path + '/' + img_name[:-4] + "_pore_heatmap.png")
+    plt.clf()
     plt.close()
     #plt.show()
-    #plt.clf()
+
     return path + '/' + img_name[:-4] + "_pore_heatmap.png"
+
+
+def get_diff_heatmap(img_name,img_grid,pore_grid,path):
+    plt.clf()
+    plt.title("Diff from average Porosity: " + img_name)
+
+    # cols = range(0,800,int(800/len(img_grid[1])))
+    # rows = range(0, 800, int(800 / len(img_grid)))
+    # fmt = matplotlib.ticker.FuncFormatter(lambda x, pos: qrates[::-1][norm(x)])
+    x_axis = np.array([i for i in range(0, 800, int(len(pore_grid)))])
+    y_axis = np.array([i for i in range(0, 700, int(700 / len(pore_grid)))])
+    avg = np.average(np.array(pore_grid))
+    norm = matplotlib.colors.Normalize(vmin=-0.5,vmax=0.5)
+
+    avg_grid = []
+    for row in pore_grid:
+        r = []
+        for col in row:
+            r.append(col-avg)
+        avg_grid.append(r)
+    print("DIFF array", avg_grid)
+
+
+    pore_im, pore_ax = heatmap(np.array(avg_grid), y_axis, x_axis,
+                               cmap="bwr",  norm=norm,
+                               cbar_kw=dict(ticks=[-0.5,0,0.5], ),
+                               cbarlabel="Diff from average porosity")
+    text = annotate_heatmap(pore_im, valfmt="{x:.2f}",textcolors=('black','black'))
+    plt.savefig('.' + path + '/' + img_name[:-4] + "_pore_diff_heatmap.png")
+    plt.clf()
+    plt.close()
+    return path + '/' + img_name[:-4] + "_pore_diff_heatmap.png"
+
 
 
 def split_up_image(image,num = 8):
