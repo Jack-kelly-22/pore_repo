@@ -136,7 +136,7 @@ def get_histogram(areas,scale,ignore=20):
 
 
 def get_porosity_heatmap(img_name,img_grid,pore_grid,path):
-    plt.clf()
+    #plt.clf()
     plt.title("Porosity of " + img_name)
 
     #cols = range(0,800,int(800/len(img_grid[1])))
@@ -151,6 +151,7 @@ def get_porosity_heatmap(img_name,img_grid,pore_grid,path):
                     cbarlabel="Porosity")
     text = annotate_heatmap(pore_im,valfmt="{x:.2f}")
     plt.savefig('.'+path + '/' + img_name[:-4] + "_pore_heatmap.png")
+    plt.close()
     #plt.show()
     #plt.clf()
     return path + '/' + img_name[:-4] + "_pore_heatmap.png"

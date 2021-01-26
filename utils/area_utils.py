@@ -219,7 +219,6 @@ def get_largest_circle_in_region(coords,max = 1,centroid= None):
 #     return largest_holes,largest_holes_areas
 
 
-
 def validate_area(region):
     print("area: ", region["area"])
     print(" filled area: ", region["filled_area"])
