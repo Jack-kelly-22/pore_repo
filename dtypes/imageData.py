@@ -81,8 +81,9 @@ class ImageData:
         
         self.regions = regions
         self.out_image = image_utils.color_out_image(regions, image,const["multi"])
-        self.out_image = image_utils.outline_included_area()
+
         self.all_areas = area_utils.get_all_areas(regions)
+        image_utils.outline_included_area(set(self.all_areas))
         #self.histogram = area_utils.get_histogram(self.all_areas,self.scale_factor,self.ignore_size)
         self.largest_areas,self.largest_regions,self.largest_holes = area_utils.get_largest_areas(regions, self)
         self.out_image = image_utils.color_out_largest(self.largest_regions, self.out_image)

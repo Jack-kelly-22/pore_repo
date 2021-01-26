@@ -67,17 +67,17 @@ def color_holes(hole_ls, image):
     return image
 
 
-def outline_included_area(image):
+def outline_included_area(all_areas):
     boundary = []
 
     #top side
     i=0
+    j=0
     go = True
-    while i<len(image[i]):
+    while i<800:
         j = 0
-        row = image[i]
-        while j<len(row) and go :
-            if(row[j]>0):
+        while j<600 and go :
+            if(i,j) in all_areas:
                 print("hit at ",i," ",j)
                 go = False
                 boundary.append((i,j))

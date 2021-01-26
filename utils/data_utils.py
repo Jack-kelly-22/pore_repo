@@ -152,7 +152,7 @@ def get_porosity_heatmap(img_name,img_grid,pore_grid,path):
     text = annotate_heatmap(pore_im,valfmt="{x:.2f}")
     plt.savefig('.'+path + '/' + img_name[:-4] + "_pore_heatmap.png")
     #plt.show()
-    plt.clf()
+    #plt.clf()
     return path + '/' + img_name[:-4] + "_pore_heatmap.png"
 
 

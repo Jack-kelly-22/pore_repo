@@ -126,8 +126,8 @@ class Spreadsheet:
         print("starting fill overview with i:", self.i )
         for image in frame.image_data_ls:
             self.page["B" + str(i)] = image.name # image Name
-            self.page["C" + str(i)] = str(image.porosity) # Porosity
-            self.page["D" + str(i)] = str(image.largest_holes[0][1] * 2 * float(image.scale_factor))# Diameter of the largest Circle
+            self.page["C" + str(i)] = str(round(image.porosity,3)) # Porosity
+            self.page["D" + str(i)] = str(round(image.largest_holes[0][1] * 2 * float(image.scale_factor),2))# Diameter of the largest Circle
             i = i + 1
         if i > self.i:
             self.i = i
@@ -182,7 +182,7 @@ class Spreadsheet:
         scale = float(img_data.scale_factor)
         for circle in img_data.largest_holes[:10]:
             # "Diameter(microns)"
-            self.page["D" + str(self.i)] = str(circle[1] * scale * 2)
+            self.page["D" + str(self.i)] = str(round(circle[1] * scale * 2,2))
             #Area(microns)
             self.page["E" + str(self.i)] = str(round((circle[1] * circle[1]) * pi * scale * scale, 2))
             #center (px)
