@@ -72,6 +72,8 @@ class Db_helper:
                 f_dat["hist_diam_img_path"] = str(row[12])
                 f_dat["disk_area_img_path"] = str(row[13])
                 f_dat["disk_pore_img_path"] = str(row[14])
+            if len(row)>15:
+                f_dat["heat_img_path"] = str(row[15])
 
         conn.close()
         return f_dat

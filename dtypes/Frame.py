@@ -1,5 +1,6 @@
 from dtypes.imageData import ImageData
 import time
+from utils import data_utils
 from os import mkdir
 import sqlite3
 from utils.sql_utils import adapt_array,convert_array
@@ -45,18 +46,27 @@ class Frame:
         self.hist_bins = []
         self.largest_holes = []
         self.largest_areas = []
+        self.heat_img_path = ''
         self.area_hist_path,self.diam_hist_path,self.area_pie_path,self.pore_pie_path = '','','',''
         self.area_std,self.diam_std = 0,0
         self.db_ref = db_ref
         self.create_dir()
         self.process_frame()
         self.save_histograms()
-        self.save_pie()
-        self.save_pie_pores()
+        #self.save_pie()
+        #self.save_pie_pores()
+        #self.save_heat_img()
         #self.heat_intensity_path = get_intensity_heatmap()
         self.add_frame_db()
 
-
+    # def save_heat_img(self):
+    #     #pore_ls1 = [image.porosity for image in self.image_data_ls[:len(self.image_data_ls)//2]]
+    #     #pore_ls2 = [image.porosity for image in self.image_data_ls[len(self.image_data_ls)//2:]]
+    #     #if len(pore_ls2)
+    #     #pore_ls = [pore_ls1,pore_ls2]
+    #     pore_ls = [[image.porosity for image in self.image_data_ls]]
+    #     name_ls = [[image.name[:-4] for image in self.image_data_ls]]
+    #     self.heat_img_path = data_utils.get_diff_heatmap(self.name,None,np.array(pore_ls),self.out_path + self.job_name+"/",name_ls)
     def create_dir(self):
         try:
             mkdir("./job-data/" + self.job_name + '/' + self.name)
@@ -91,8 +101,9 @@ class Frame:
         hist_area_img_path,
         hist_diam_img_path,
         disk_area_img_path,
-        disk_pore_img_path)
-                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'''
+        disk_pore_img_path,
+        heat_img_path)
+                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'''
         type = 0
         if self.type == 'light':
             type = 1
@@ -115,7 +126,8 @@ class Frame:
                               self.area_hist_path,
                               self.diam_hist_path,
                               self.area_pie_path,
-                              self.pore_pie_path
+                              self.pore_pie_path,
+                              self.heat_img_path
                               ))
         conn.commit()
         conn.close()
@@ -150,7 +162,7 @@ class Frame:
         self.avg_pore = self.avg_pore + new_image.porosity
 
     def save_histogram_hole_diameter(self):
-        print(self.largest_holes)
+        #print(self.largest_holes)
         largest_diams = [x[1]*2*float(self.constants["scale"]) for x in self.largest_holes]
         self.diam_std = std(largest_diams)
         print("STD diam:", self.diam_std)
@@ -163,7 +175,7 @@ class Frame:
 
 
     def save_histogram_hole_area(self):
-        print(self.largest_holes)
+        #print(self.largest_holes)
         plt.clf()
         largest_areas = [(x[1]**2) * pi * (float(self.constants["scale"])**2) for x in self.largest_holes]
         plt.hist(largest_areas,bins = 10)
@@ -194,6 +206,7 @@ class Frame:
         labels = area_dic.keys()
         plt.clf()
         plt.title("Portion of Largest Areas by image")
+        plt.text()
         plt.pie(area_dic.values(),labels=area_dic.keys(),
                autopct='%1.1f%%',
                shadow=True,
@@ -203,21 +216,21 @@ class Frame:
         plt.savefig("./job-data/" + self.job_name + '/' + self.name + '/' + "area_pie_chart.png")
         self.area_pie_path = "./job-data/" + self.job_name + '/' + self.name + '/' + "area_pie_chart.png"
 
-
-    def save_pie_pores(self):
-        print("creating pore pie chart")
-        names = [image.name for image in self.image_data_ls]
-        vals = [image.porosity*100 for image in self.image_data_ls]
-
-        plt.clf()
-        plt.title("Share of Porosity by Image")
-        plt.pie(vals, labels= names,
-                autopct='%1.1f%%',
-                shadow=True,
-                startangle=90
-        )
-        self.pore_pie_path = "./job-data/" + self.job_name + '/' + self.name + '/' + "pore_pie_chart.png"
-        plt.savefig(self.pore_pie_path)
+    #
+    # def save_pie_pores(self):
+    #     print("creating pore pie chart")
+    #     names = [image.name for image in self.image_data_ls]
+    #     vals = [image.porosity*100 for image in self.image_data_ls]
+    #
+    #     plt.clf()
+    #     plt.title("Share of Porosity by Image")
+    #     plt.pie(vals, labels= names,
+    #             autopct='%1.1f%%',
+    #             shadow=True,
+    #             startangle=90
+    #     )
+    #     self.pore_pie_path = "./job-data/" + self.job_name + '/' + self.name + '/' + "pore_pie_chart.png"
+    #     plt.savefig(self.pore_pie_path)
 
 
     

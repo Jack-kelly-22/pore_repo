@@ -6,7 +6,7 @@ class LiveImage:
     def __init__(self,img_data,constants):
         self.scale_factor = constants["scale"]
         self.name = 'temp'
-        #img_data = (drc.b64_to_numpy(img_data,False))
+        img_data = (drc.b64_to_numpy(img_data,False))
         #img =
         img = resize(img_data, dsize=(800, 600), interpolation=INTER_CUBIC)
         img_seg = area_utils.get_thresh_image(img,constants)

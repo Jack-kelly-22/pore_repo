@@ -28,9 +28,12 @@ class Spreadsheet:
         self.fill_largest_areas(frame)
         self.fill_histograms(frame)
         self.fill_stds(frame)
+        #self.fill_frame_heatmap(frame)
         self.fill_overview_by_image(frame)
         self.fill_img_rows(frame)
-        self.fill_pie_charts(frame)
+        #self.fill_pie_charts(frame)
+
+
 
         self.workbook.save('.' + frame.out_path + self.job_name  + '/' + frame.name + "_sheet.xlsx")
 
@@ -166,6 +169,7 @@ class Spreadsheet:
     def fill_image_table_name(self,img_data):
         self.style_header(color= '00666699')
         self.page["D" + str(self.i)] = "Image Name: " + img_data.name
+
         self.i = self.i + 1
 
     def fill_image_table_header(self,img_data):
@@ -180,6 +184,12 @@ class Spreadsheet:
 
     def fill_image_table(self,img_data):
         scale = float(img_data.scale_factor)
+        s=0
+        for hole in img_data.largest_holes:
+           s= s + float(hole[1] * scale *2)
+        avg = s/len(img_data.largest_holes)
+        self.page['E'+str(self.i)] = "Avg Diameter"
+        self.page['F'+str(self.i)] = str(round(avg,3))
         for circle in img_data.largest_holes[:10]:
             # "Diameter(microns)"
             self.page["D" + str(self.i)] = str(round(circle[1] * scale * 2,2))
@@ -190,12 +200,21 @@ class Spreadsheet:
             self.i = self.i + 1
         self.i = self.i + 5
 
+    def fill_frame_heatmap(self, frame):
+        heatmap = Image('.' +frame.heat_img_path)
+        heatmap.anchor = 'A' + str(self.i)
+        self.page.add_image(heatmap)
+
     def fill_image_output(self,im_dat,i ):
         og_img = Image('.' +im_dat.image_out_path_og)
         thresh_img = Image('.' + im_dat.image_out_path)
-        heat_img = Image('.' + im_dat.heat_out_path)
-        heat_diff = Image('.' + im_dat.heat_diff_out_path)
-        image_ls =[og_img,thresh_img,heat_img,heat_diff]
+        image_ls = [og_img, thresh_img]
+        if im_dat.heat_out_path!= '':
+            heat_img = Image('.' + im_dat.heat_out_path)
+            heat_diff = Image('.' + im_dat.heat_diff_out_path)
+            image_ls.append(heat_diff)
+            image_ls.append(heat_img)
+
         anchor_ls =["G","K","P","U"]
         for j in range(len(image_ls)):
             image_ls[j].anchor = anchor_ls[j] + str(i)
@@ -209,6 +228,12 @@ class Spreadsheet:
         sorted_holes = sorted(frame.largest_holes, key=lambda tup:float(tup[1]))
         sorted_holes.reverse()
         i = 7
+        s=0
+        for hole in sorted_holes:
+           s= s + float(hole[1] * frame.constants['scale'] *2)
+        avg = s/len(sorted_holes)
+        self.page['H5'] = "Avg Diameter"
+        self.page['I5'] = str(round(avg,3))
         scale = float(frame.constants['scale'])
         #num_rows = frame.constants['num_circles']
         for hole in sorted_holes[:10]:
@@ -220,7 +245,6 @@ class Spreadsheet:
             i = i + 1
         if i>self.i:
             self.i = i
-
 
 
 

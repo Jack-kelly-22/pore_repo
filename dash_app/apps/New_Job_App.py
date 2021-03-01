@@ -12,6 +12,7 @@ import dash
 from dtypes.imageData import ImageData
 from os import listdir
 from skimage import io
+import requests
 import plotly.express as px
 import os
 from utils.input_utils import *
@@ -68,7 +69,7 @@ def preview_clicked(n,value,thresh,warn,ignore,alt,alt_thresh,multi,type1):
                                                 ignore,
                                                 alt,
                                                 alt_thresh,
-                                                multi)
+                                                multi,20)
         img_path = value[0] + '/' + selected
         img_data = ImageData("preview-job",
                              'preview-frame',
@@ -110,7 +111,6 @@ def parse_contents(contents, filename, date, childs):
     if contents != None:
         if (type(contents) == type(list())):
             print("list var")
-
             for content in contents:
                 # contents = base64.b64encode(contents)
                 print("type of contents:", type(contents))
@@ -147,7 +147,7 @@ def update_program_choice(value):
 
 @app.callback(Output(component_id='warning', component_property='children'),
               [Input(component_id='new-run', component_property='n_clicks'),
-               State(component_id = 'folder-checks',component_property= 'value'),
+               State(component_id ='folder-checks',component_property= 'value'),
                State(component_id='new-thresh', component_property='value'),
                State(component_id='new-warn', component_property='value'),
                State(component_id='new-ignore', component_property='value'),
@@ -189,17 +189,22 @@ def warns(n_clicks,folders,thresh,warn,ignore,alt,alt_thresh,multi,type):
                State(component_id='new-fiber-type', component_property="value"),
                State(component_id='spread', component_property='checked'),
                State(component_id='new-number', component_property="value"),
+               State(component_id='new-crop', component_property="value"),
+               State(component_id='new-boarder-size', component_property="value"),
                ],
               prevent_initial_call=True
               )
 
 
 
-def run_button_clicked_new(n,folders,thresh,warn,ignore,alt,alt_thresh,multi,type,sheet,num):
+def run_button_clicked_new(n,folders,thresh,warn,ignore,alt,alt_thresh,multi,type,sheet,num,boarder,boarderSize):
 
     if n is not None and n!= 0:
         const = get_default_constants()
         const = update_constants(const,thresh,type,warn,ignore,alt,alt_thresh,multi,num)
+
+        if(boarder):
+            const['boarder'] = int(boarderSize)
         options['constants'] = const
 
     if n is None:
@@ -211,13 +216,15 @@ def run_button_clicked_new(n,folders,thresh,warn,ignore,alt,alt_thresh,multi,typ
             for fpath in folders:
                 options["frame_paths"].append(fpath)
             print("frame paths in job", options["frame_paths"])
-            job = Job(options, db_helper)
+            requests.post('http://127.0.0.1:8050/queue', json=options)
+            #job = Job(options, db_helper)
             options["frame_paths"]=[]
+            return ['Job Started- refresh page to start new']
             #current_job = job
-            if sheet:
-                for folder in job.frame_ls:
-                    Spreadsheet(folder,job.job_name)
-            return [dbc.Button("View Results",href="./job_id_" + job.job_id)]
+            # if sheet:
+            #     for folder in job.frame_ls:
+            #         Spreadsheet(folder,job.job_name)
+            # return [dbc.Button("View Results",href="./job_id_" + job.job_id)]
     else:
         return [dbc.Alert(children=[" \tError: Not all fields completed"], color="danger", dismissable=True)]
 

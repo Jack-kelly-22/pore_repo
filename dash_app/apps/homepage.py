@@ -6,6 +6,7 @@ from dash_app.components.input_col import get_input_col
 from numpy import array
 from dash_bootstrap_components import Table
 from dash_app.liveImage import LiveImage
+from dtypes.imageData import ImageData
 from dash.dependencies import Output,Input,State
 from dash_app.app import app
 from dash_app.components import dash_reusable_components as drc
@@ -112,9 +113,11 @@ def show_original_image(data):
               State(component_id='home-alt-thresh', component_property='value'),
               State(component_id='home-multi', component_property="checked"),
               State(component_id='home-fiber-type', component_property="value"),
-              State(component_id='file-store', component_property='data')
+              State(component_id='file-store', component_property='data'),
+              State(component_id='home-number', component_property='value'),
+
               )
-def update_live(n_clicks, thresh_v,warn_v,ignore_v,alt_v,alt_thresh_v,mult,fiber,data):
+def update_live(n_clicks, thresh_v,warn_v,ignore_v,alt_v,alt_thresh_v,mult,fiber,data,num):
     if n_clicks is not None and n_clicks != 0:
         print("n_clicks: ", n_clicks)
         print("live_thresh :", thresh_v)
@@ -129,9 +132,10 @@ def update_live(n_clicks, thresh_v,warn_v,ignore_v,alt_v,alt_thresh_v,mult,fiber
         const['use_alt'] = bool(alt_v)
         const['alt_thresh'] = int(alt_thresh_v)
         const['multi'] = bool(mult)
-
-        live_img = LiveImage(data['img'],const)
-        fig = px.imshow(live_img.out_image)
+        const['num_circles'] = int(num)
+        img_data = ImageData("preview-job","preview-frame",'',const,None,dat=data['img'])
+        #live_img = LiveImage(data['img'],const)
+        fig = px.imshow(img_data.out_image)
         # Shape defined programatically
         fig.update_layout(dragmode="zoom",
                           autosize=False,
@@ -149,15 +153,15 @@ def update_live(n_clicks, thresh_v,warn_v,ignore_v,alt_v,alt_thresh_v,mult,fiber
             th = const['alt_thresh']
         else:
             th = const['thresh']
-        summary_table = create_summary_table(live_img.porosity,
-                                             live_img.largest_areas[0],
-                                             live_img.largest_circles[0],
+        summary_table = create_summary_table(img_data.porosity,
+                                             img_data.largest_areas[0],
+                                             img_data.largest_holes[0],
                                              const["warn_size"],
                                              th,
                                              float(const['scale'])
                                              )
-        hole_table = create_hole_table(live_img.largest_circles,const['scale'])
-        pore_table = create_pore_table(live_img.largest_areas,const['scale'])
+        hole_table = create_hole_table(img_data.largest_holes,const['scale'])
+        pore_table = create_pore_table(img_data.largest_areas,const['scale'])
         new_img = dcc.Graph(id="new-graph", figure=fig, config=config)
         image_col =dbc.Col([html.H3("Out image:"), summary_table, new_img],width={'offset':1,'width':'7'})
         table_col = dbc.Col([hole_table,pore_table])

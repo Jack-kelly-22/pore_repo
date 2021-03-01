@@ -7,16 +7,19 @@ from utils import image_utils, area_utils,data_utils
 from dtypes.db_helper import Db_helper
 from skimage import io
 import os
+import numpy as np
+from dash_app.components import dash_reusable_components as drc
 from scipy.ndimage.filters import gaussian_filter
 import matplotlib.pyplot as plt
 import skimage
 from skimage.transform import rescale #resize
 class ImageData:
-    def __init__(self,jname,frame,path,const, db_ref,):
+    def __init__(self,jname,frame,path,const, db_ref,dat = None):
         #create unique identifier for imagedata object in db
         self.im_id = str(uuid.uuid4()).replace('-','') + "_" + frame
         #this should be the root path for output of data/images
-
+        self.constants = const
+        print("DO I crop:",const['crop'],type(const['crop']))
         #this should strickty be the name of the image(no delimeters)
         self.name = os.path.basename(os.path.normpath(path))
         self.path = "/job-data/" + jname + "/" + frame
@@ -39,6 +42,7 @@ class ImageData:
         self.regions = None
         self.num_circles = const['num_circles']
         self.img_grid =[]
+        self.dat = dat
         #scale image
         self.image_handle = None
         self.filtered_image = None
@@ -50,16 +54,11 @@ class ImageData:
         self.all_areas = []
         self.coords = []
         self.histogram = None
-        self.heat_diff_out_path ='imageData.py'
-        #this should be opened(no need to open or close)
+        self.heat_diff_out_path =''
+        self.avg_pore = 0
+
         self.db_ref = db_ref
         self.compute_image(path,const)
-
-
-    #def __repr__ (self):
-    #    return "porosity: " + str(self.porosity) + " \n scale factor: " + str(self.scale_factor)  +" \n image path: " + self.image_path
-
-
 
 
     def compute_image(self,path,const):
@@ -67,39 +66,51 @@ class ImageData:
         max = 1
         max_pts = []
         pts = []
-        image_data = io.imread(path)
-        gausian = gaussian_filter(image_data,sigma=1)
-        #image = resize(gausian,(600,800))
-        image=resize(image_data, dsize =(800,600), interpolation = cv2.INTER_CUBIC)
-        #image = area_utils.get_adjusted_image(image)
+        orig = None
+        if self.dat == None:
+            image_data = io.imread(path)
+        else:
+            image_data = (drc.b64_to_numpy(self.dat, False))
+
+
+        image=resize(image_data, dsize =(800,600), interpolation = cv2.INTER_AREA)
         image_utils.save_out_image(image,self.image_out_path_og)
-        #if const["crop"]!= 0:
-        #    image = image[:-const['crop'],:-const['crop']]
-        image = area_utils.adjust_exposure(image)
+        if 'x0' in const.keys():
+            x0, y0 = int(const["x0"]), int(const["y0"])
+            x1, y1 = int(const["x1"]), int(const["y1"])
+            image[y0:y1, x0:x1]=(drc.b64_to_numpy(self.dat, False))
+            print("Updating image")
+
+        if const['crop']:
+            orig = image
+            image = area_utils.get_crop_image(image, const['boarder'])
+
+
+        #image = area_utils.adjust_exposure(image)
+
         self.img_seg = area_utils.get_thresh_image(image,const)
-        self.img_grid,pore_grid,z_pore= data_utils.split_up_image(self.img_seg,4)
-        self.heat_out_path = data_utils.get_porosity_heatmap(self.name,self.img_seg,pore_grid,self.path)
-        self.heat_diff_out_path = data_utils.get_diff_heatmap(self.name, self.img_seg, pore_grid, self.path)
-        #data_utils.get_intensity_heatmap(self.name, self.img_seg, z_pore)
-        #calculate porosity
-        #area_utils.try_ML(image)
+
+
         self.porosity = area_utils.get_porosity(self.img_seg)
-        print(self.porosity)
+        print("Porosity of ", self.name, " :", self.porosity)
         label_image = label(self.img_seg)
         regions = regionprops(label_image)
-        
         self.regions = regions
-        self.out_image = image_utils.color_out_image(regions, image,const["multi"])
-
         self.all_areas = area_utils.get_all_areas(regions)
-        image_utils.outline_included_area(set(self.all_areas))
-        #self.histogram = area_utils.get_histogram(self.all_areas,self.scale_factor,self.ignore_size)
-        self.largest_areas,self.largest_regions,self.largest_holes = area_utils.get_largest_areas(regions, self)
+        self.largest_areas, self.largest_regions, self.largest_holes = area_utils.get_largest_areas(regions, self)
+        self.out_image = image_utils.color_out_image(regions, image, const["multi"],const['min_ignore'],const['scale'])
         self.out_image = image_utils.color_out_largest(self.largest_regions, self.out_image)
-        #self.largest_holes,largest_holes_area = area_utils.get_largest_holes(l)
-        #self.histogram = area_utils.get_histogram(self.all_areas)
-        #self.out_image = image_utils.color_out_set(max_pts, self.out_image)
-        self.out_image = image_utils.color_holes(self.largest_areas, self.out_image)
+        self.out_image = image_utils.color_holes2(self.largest_holes[:const['num_circles']], self.out_image)
+
+        if const['crop']:
+            i=0
+            while i<len(self.largest_holes):
+                center = (self.largest_holes[i][0][0]+const['boarder'],self.largest_holes[i][0][1]+const['boarder'])
+                self.largest_holes[i][0]=center
+                i+=1
+            self.out_image = area_utils.sum_images(self.out_image,orig,const['boarder'])
+            self.out_image = image_utils.add_boarder(self.out_image,const['boarder'])
+
         image_utils.save_out_image(self.out_image, self.image_out_path)
         db = Db_helper()
         db.post_img_to_db(self)

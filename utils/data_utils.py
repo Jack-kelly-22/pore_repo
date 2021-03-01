@@ -32,16 +32,22 @@ def heatmap(data, row_labels, col_labels, ax=None,
     **kwargs
         All other arguments are forwarded to `imshow`.
     """
-
+    plt.figure(figsize=(3,len(data[0])*2))
     if not ax:
         ax = plt.gca()
 
+
     # Plot the heatmap
+    #ax.figure(figsize=(3,len(data)))
+    data = np.transpose(data)
     im = ax.imshow(data, **kwargs)
 
     # Create colorbar
     cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
-    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+
+    #cbar.make_axes(ax,'left')
+    #cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom",)
+
 
     # We want to show all ticks...
     #ax.set_xticks(np.arange(data.shape[1]))
@@ -57,6 +63,7 @@ def heatmap(data, row_labels, col_labels, ax=None,
     # Rotate the tick labels and set their alignment.
     plt.setp(ax.get_xticklabels(), rotation=-30, ha="right",
              rotation_mode="anchor")
+    plt.subplots_adjust(top=0.9,left=0)
 
     # Turn spines off and create white grid.
     for edge, spine in ax.spines.items():
@@ -72,7 +79,7 @@ def heatmap(data, row_labels, col_labels, ax=None,
 
 def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
                      textcolors=("black", "white"),
-                     threshold=None, **textkw):
+                     threshold=None,img_names=[], **textkw):
     """
     A function to annotate a heatmap.
 
@@ -123,7 +130,10 @@ def annotate_heatmap(im, data=None, valfmt="{x:.2f}",
     for i in range(data.shape[0]):
         for j in range(data.shape[1]):
             kw.update(color=textcolors[int(im.norm(data[i, j]) > threshold)])
-            text = im.axes.text(j, i, valfmt(data[i, j], None), **kw)
+            if len(img_names)!=0:
+                text = im.axes.text(j, i, valfmt(data[i, j], None) + '\n' + img_names[0][i+j], **kw)
+            else:
+                text = im.axes.text(j, i, valfmt(data[i, j], None) , **kw)
             texts.append(text)
 
     return texts
@@ -159,9 +169,9 @@ def get_porosity_heatmap(img_name,img_grid,pore_grid,path):
     return path + '/' + img_name[:-4] + "_pore_heatmap.png"
 
 
-def get_diff_heatmap(img_name,img_grid,pore_grid,path):
+def get_diff_heatmap(img_name,img_grid,pore_grid,path,img_names=None):
     plt.clf()
-    plt.title("Diff from average Porosity: " + img_name)
+
 
     # cols = range(0,800,int(800/len(img_grid[1])))
     # rows = range(0, 800, int(800 / len(img_grid)))
@@ -177,18 +187,18 @@ def get_diff_heatmap(img_name,img_grid,pore_grid,path):
         for col in row:
             r.append(col-avg)
         avg_grid.append(r)
-    print("DIFF array", avg_grid)
-
 
     pore_im, pore_ax = heatmap(np.array(avg_grid), y_axis, x_axis,
                                cmap="bwr",  norm=norm,
                                cbar_kw=dict(ticks=[-0.5,0,0.5], ),
                                cbarlabel="Diff from average porosity")
-    text = annotate_heatmap(pore_im, valfmt="{x:.2f}",textcolors=('black','black'))
-    plt.savefig('.' + path + '/' + img_name[:-4] + "_pore_diff_heatmap.png")
+    #pore_im
+    text = annotate_heatmap(pore_im, valfmt="{x:.3f}",textcolors=('black','black'),img_names=img_names)
+    plt.title("Diff from avg. Porosity",loc='left')
+    plt.savefig('.' + path + img_name + '/' + "pore_diff_heatmap.png")
     plt.clf()
     plt.close()
-    return path + '/' + img_name[:-4] + "_pore_diff_heatmap.png"
+    return path + img_name+'/'+"pore_diff_heatmap.png"
 
 
 

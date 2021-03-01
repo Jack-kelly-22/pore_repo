@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from skimage import exposure
 from skimage.filters import gaussian,threshold_isodata
 from skimage.color import rgb2gray
+ 
 from numpy import uint8
 from porespy.metrics import porosity
 from utils import coord_utils
@@ -14,15 +15,19 @@ from utils import data_utils
 from tensorflow import image as tfImage
 from utils.filters_utils import scalar_transform
 from pandas import DataFrame
+from skimage.morphology import binary_opening,area_opening
+from skimage.exposure import equalize_adapthist
 from skimage.filters import threshold_sauvola,threshold_local,threshold_otsu
-from skimage.filters.rank import enhance_contrast_percentile
-from PIL import ImageEnhance
+#from skimage.filters.rank import enhance_contrast_percentile
+#from PIL import ImageEnhance
 import numpy as np
-from scipy.ndimage.filters import gaussian_filter
+
+import random
+
 import matplotlib.pyplot as plt
 import skimage
-from skimage.data import coins
-from skimage.transform import rescale
+from skimage import restoration
+#from skimage.transform import rescale
 
 from sklearn.feature_extraction import image as img2
 from sklearn.cluster import spectral_clustering
@@ -57,47 +62,154 @@ def get_porosity(img_seg):
     return pore
 
 def get_largest_areas(regions,image_data):
-    # dataframe = ps.metrics.props_to_DataFrame(regions)
     largest_pores = []
-    #largest_pores_coords =[]
-    print("gonna sort ",len(regions))
     ig = float(image_data.ignore_size)
-    #regions = filter(lambda: region.area<image_data.ignore_size,regions)
     regions = [region for region in regions if region.area>ig]
+    print("#OF REGIONS: ",len(regions))
+
     #regions = sorted(regions,key = lambda tup: t)
-    regions.sort(key=lambda reg:reg["area"])
-    largest_reg = []
-
-
-    if len(regions)>100:
-        regions = regions[-image_data.num_circles:]
-    regions.reverse()
+    regions.sort(key=lambda reg:reg["area"],reverse=True)
+    # regions.reverse()
     largest_circles = []
     i = 0
-    print("len of regions:", len(regions))
+    import time
+    timer = time.perf_counter()
+    min_area = 0
+    min_r = 1
+    incl_coords = set()
+
+    #largest_circles = get_largest_circles(regions,image_data.constants['num_circles'])
+    largest_circles = get_largest_holes(regions, image_data, image_data.constants)
+
+    for region in regions[:100]:
+        if region['area']>min_area:
+            y, x, = region["centroid"]
+            coords = region["coords"]
+            x,y=int(x),int(y)
+            coords = coord_utils.remove_z_set(coords)
+            incl_coords=incl_coords.union(coords)
+
+            temp_coords = coords
+            largest_pores.append(
+                [image_data.name,
+                 int(region.area * (image_data.scale_factor * image_data.scale_factor)),
+                 (x // 1),
+                 (y // 1),
+                 region["centroid"],
+                 1
+                 ])
+            #print("reg:" + str(i) + '/' + str(len(regions)) )
+            i = i + 1
+        else:
+            print("hit min area")
+
+
+    largest_pores.sort(key=lambda p: p[1], reverse=True)
+
+    largest_circles.sort(key= lambda x: x[1],reverse=True)
+    print("time for area and circle calc:", time.perf_counter() - timer)
+    return largest_pores,regions,largest_circles
+
+
+def get_largest_holes(regions,image_data,constants):
+    holes = []
+
+    min = 0
+    if(len(regions) < constants['num_circles']*2):
+        n = len(regions)-1
+    else:
+        n = constants['num_circles'] * 2
+    i=0
+    for region in regions[:n]:
+        #find the largest hole in reg
+        y, x, = region["centroid"]
+        coords = region["coords"]
+        coords = coord_utils.remove_z_set(coords)
+        x, y = int(x), int(y)
+        #coords = coord_utils.remove_z_set(coords)
+        center, r = get_largest_circle_in_region(coords, max=int(region['minor_axis_length'] * 0.2),
+                                              centroid=(int(x), int(y)))
+        center =(center[0],center[1])
+        holes.append([center, r, image_data.name,i])
+        i+=1
+    holes.sort(key=lambda x:x[1],reverse=True)
+    holes=holes[:constants['num_circles']]
+    min = holes[-1][1]**2*31.4
+    for hole in holes[:constants['num_circles']]:
+        if(min<len(regions[hole[3]]['coords'])):
+            center,r,reg_coords = hole[0],hole[1],regions[hole[3]]['coords']
+            # print("reg-coords",type(reg_coords),reg_coords)
+            circle_coords = disk(center, radius=r)
+            coord_set = {(reg_coords[j][0], reg_coords[j][1]) for j in range(0, len(reg_coords))}
+            coords = coord_utils.remove_z_set(reg_coords)
+            # print("len:",len(reg_coords))
+            circle_coords = {(circle_coords[0][j],circle_coords[1][j]) for j in range(0,len(circle_coords[0]))}
+            area_coords=[]
+            while(len(circle_coords)<0.5 * len(coords)):
+                #checking for secondary circle
+                # print("looking for third")
+                area_coords = coords - circle_coords
+                center, r = get_largest_circle_in_region(area_coords,)
+                center = (center[0], center[1])
+                holes.append([center,r,image_data.name])
+                cir = disk(center, radius=r)
+                circle_coords = circle_coords.union(set({(cir[0][j], cir[1][j]) for j in range(0, len(cir[0]))}))
+                #print('circle coords:',len(circle_coords))
+    return holes
+
+
+
+def get_largest_areas_simple(regions, constants):
+
+    largest_pores = []
+    ig = float(constants['ignore_size'])
+
+    regions = [region for region in regions if region.area > ig]
+    regions.sort(key=lambda reg: reg["area"], reverse=True)
+    largest_circles = []
+    i = 0
     for region in regions:
         y, x, = region["centroid"]
         coords = region["coords"]
-        print("centroid:", x,y)
         coords = coord_utils.remove_z_set(coords)
-        center,r = get_largest_circle_in_region(coords,centroid=(int(x),int(y))) #finds largest incribed circle
-        largest_circles.append([center,r,image_data.name])
+        center, r = get_largest_circle_in_region(coords, centroid=(int(x), int(y)))
+        largest_circles.append([center, r, 'subImage'])
+
+
         center = (center[0], center[1])
         largest_pores.append(
-            [image_data.name,
-             int(region.area * (image_data.scale_factor * image_data.scale_factor)),
+            ["subImage",
+             int(region.area * (constants['scale_factor'] **2)),
              (x // 1),
              (y // 1),
              center,
              r
              ])
-        print("reg:" + str(i) + '/' + str(len(regions)) )
         i = i + 1
-    largest_circles.sort(key= lambda x: x[1],reverse=True)
-    #largest_circles.reverse()
-    largest_pores.sort(key = lambda x:x[1],reverse=True)
-    
-    return largest_pores,regions,largest_circles
+    largest_circles.sort(key=lambda x: x[1], reverse=True)
+    largest_pores.sort(key=lambda x: x[1], reverse=True)
+
+    return largest_pores, regions, largest_circles
+
+def sum_images(colored,original,boarder):
+    r_cons, g_cons, b_cons = [0, 0, 0]
+    r_, g_, b_ = colored[:, :, 0], colored[:, :, 1], colored[:, :, 2]
+    rb = np.pad(array=r_, pad_width=boarder // 2, mode='constant', constant_values=r_cons)
+    gb = np.pad(array=g_, pad_width=boarder // 2, mode='constant', constant_values=g_cons)
+    bb = np.pad(array=b_, pad_width=boarder // 2, mode='constant', constant_values=b_cons)
+    padded = np.dstack(tup=(rb, gb, bb))
+
+    return np.where(padded!=0,padded,original)
+
+
+def get_crop_image(image,boarder):
+    y,x,z = image.shape
+    bx,by = 800-boarder,600-boarder
+    startx = x // 2 - (bx // 2)
+    starty = y // 2 - (by // 2)
+    cropped = image[starty:starty + by, startx:startx + bx]
+    return cropped
+
 
 def get_thresh_image(image, constants):
     if constants["use_alt"]:
@@ -110,58 +222,11 @@ def get_thresh_image(image, constants):
     return img_seg
 
 
-def get_adjusted_image(image):
-    image = tfImage.adjust_contrast(image, 1.5)
-    return image
 
-
-def try_ML(image):
-    # Convert the image into a graph with the value of the gradient on the
-    # edges.
-    graph = img2.img_to_graph(image)
-
-    # Take a decreasing function of the gradient: an exponential
-    # The smaller beta is, the more independent the segmentation is of the
-    # actual image. For beta=1, the segmentation is close to a voronoi
-    beta = 10
-    eps = 1e-6
-    graph.data = np.exp(-beta * graph.data / graph.data.std()) + eps
-
-    # Apply spectral clustering (this step goes much faster if you have pyamg
-    # installed)
-    N_REGIONS = 25
-    for assign_labels in ('kmeans', 'discretize'):
-        t0 = time.time()
-        labels = spectral_clustering(graph, n_clusters=N_REGIONS,
-                                     assign_labels=assign_labels, random_state=42)
-        t1 = time.time()
-        labels = labels.reshape((800,600))
-
-        plt.figure(figsize=(5, 5))
-        plt.imshow(image, cmap=plt.cm.gray)
-        for l in range(N_REGIONS):
-            plt.contour(labels == l,
-                        colors=[plt.cm.nipy_spectral(l / float(N_REGIONS))])
-        plt.xticks(())
-        plt.yticks(())
-        title = 'Spectral clustering: %s, %.2fs' % (assign_labels, (t1 - t0))
-        print(title)
-        plt.title(title)
-    #plt.show()
-
-
-def get_alt_thresh_image(image,alt_thresh,fiber):
-
-    #image = tfImage.adjust_saturation(image,2.6)
-    #image = tfImage.adjust_contrast(image,0.7)
-    image = tfImage.adjust_contrast(image, 1.5)
+def get_alt_thresh_image(image,alt_thresh,fiber,):
     image = rgb2gray(image)
 
-
-    #image = exposure.rescale_intensity(image)
-    #image = enhance_contrast_percentile(image,disk(radius=3),p0=.1, p1=.9)
-    #tr = threshold_local(image, 101, 'mean', offset=-(alt_thresh/255.0))
-    tr = threshold_local(image, 301,'mean', mode= 'constant', cval=0, offset=-(alt_thresh / 255.0))
+    tr = threshold_local(image, 601,'mean', mode= 'constant', cval=0, offset=-(alt_thresh / 255.0))
     
     #print("fiber is ", fiber)
     if fiber == 'dark':
@@ -170,50 +235,32 @@ def get_alt_thresh_image(image,alt_thresh,fiber):
     else:
         print("light fibers")
         img_seg = (image < tr).astype(uint8)
-    window_size = 25
-    #plt.imshow(img_seg)
 
+    window_size = 25
     return img_seg
 
-# def get_split_thresh_image(image,threshold):
-#     image = rgb2gray(image)
-#     img_grid,pore_grid,z_pore_grid = data_utils.split_up_image(image,num=3)
-#     for i in range(len(img_grid)):
-#         for j in range(len(img_grid[i])):
-#             thresh = threshold * z_pore_grid[i][j]
-#             img_seg = (image > threshold).astype(uint8)
-#
 
 
 def get_reg_thresh_image(image, threshold,fiber):
-    #print(image)
-    #image = gaussian(image,0.7)
-    image = tfImage.adjust_contrast(image,1.5)
+    # image = equalize_adapthist(image, clip_limit=0.02)
+    #image = tfImage.adjust_contrast(image,1.5)
     image = rgb2gray(image)
+
+
+
     if fiber == 'dark':
-        #threshold = threshold_isodata(image,nbins=16,)
-        #img_seg = (image > threshold).astype(uint8)
         img_seg = (image > threshold/255).astype(uint8)
-        #img_seg = get_alt_thresh_image(img_seg, 30, fiber)
     else:
         img_seg = (image < threshold/255).astype(uint8)
     window_size = 25
 
     return img_seg
-#
-# def get_outline(img_seg):
-#     x,y = img_seg.shape
-#     #top edge
-#     j =0
-#     k = 0
-#     print("ODD COL",)
 
 def try_circle(coords, middle,size):
     go = True
     i = size
     area_pts = set()
     ls_x,ls_y = [],[]
-
     while go:
         ls_x,ls_y = disk((middle[0],middle[1]),i)
         j = 0
@@ -221,24 +268,10 @@ def try_circle(coords, middle,size):
         pt = (0,0)
         if not coord_utils.check_circle(circle_pts,coords):
             go = False
-        # while j < len(ls_x) and go:
-        #     if go:
-        #         pt = (ls_x[j],ls_y[j])
-        #         if(coord_utils.check_pt(pt, middle, area_pts, coords)):
-        #             area_pts.add(pt)
-        #         else:
-        #             go = False
-        #     j= j + 1
         i = i + 1
     return i-1,(middle[0],middle[1])
 
-# def area_backup(regions,r,area):
-#     extra_circ = []
-#     for region in regions:
-#         if region.area>area:
-#             center, max = get_largest_circle_in_region(region.coords,r-1)
-#             if max>r:
-#                 print('found larger')
+
 
 
 def get_largest_circle_in_region(coords,max = 1,centroid= None):
@@ -252,35 +285,24 @@ def get_largest_circle_in_region(coords,max = 1,centroid= None):
     reg_coords = coords
     n = 0
     coord_set = coords
+    i = max
     #coord_set = {(reg_coords[j][0],reg_coords[j][1]) for j in range(0,len(coords))}
     for pt in reg_coords:
         if centroid is not None:
             pt = (centroid[0], centroid[1])
-            print("testing centroid:", pt, " first")
+            #print("testing centroid:", pt, " first")
             centroid = None
+            center=pt
         n, pts = try_circle(coord_set, pt, max)
         if (n > max):
             max = n
             max_pts = pts
             center = pt
-    print("MAX:", max)
+
+    print("found max-:", max)
     return center,max,
 #
-# def get_largest_holes(largest_areas,regions):
-#     print("start get largest holes")
-#     largest_holes = []
-#     largest_holes_areas =[]
 #
-#     for large_area in largest_areas:
-#         mid,r,pts, = get_largest_circle_in_region(large_area,centroid=large_area.centeroid)
-#         largest_holes.append([mid,r])
-#         largest_holes_areas.append([mid,r,pts])
-#     for hole in largest_holes_areas:
-#         area_backup(regions,hole[1],len(hole[2]))
-#     largest_holes = sorted(largest_holes, key=lambda tup: float(tup[1]), reverse=True)
-#     largest_holes_areas = sorted(largest_holes_areas, key=lambda tup: float(tup[1]),reverse=True)
-#     print("large_holes", largest_holes)
-#     return largest_holes,largest_holes_areas
 
 
 def validate_area(region):

@@ -25,24 +25,6 @@ import threading
 
 
 
-# constants = {
-#     "thresh": None,
-#      "min_ignore": 20.0,
-#      "warn_size": 5000.0,
-#      "scale" : 1.0
-# }
-#
-#
-# #options put in by user these are just placeholders
-# options ={
-#     "program_type": "light",
-#     "input_type":"single",
-#     "job_name": "default_name",
-#     "ref_ls": [],
-#     "name_ls": [],
-#     "constants":constants,
-#     "tags": ["NULL(lol)"]
-#     }
 
 app.layout = html.Div([
     dcc.Location(id = 'url', refresh= False),
@@ -67,7 +49,6 @@ def display_page(pathname):
     else:
         print("starting homepage")
         return homepage.layout
-
 
 
 

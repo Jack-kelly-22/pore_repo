@@ -7,6 +7,13 @@ def sort_areas(frame_dic):
     2: area x
     3: area y"""
     area_ls = []
+    if "image_data_ls" not in frame_dic.keys():
+        area_ls = frame_dic["largest_areas"]
+        area_ls = sorted(area_ls, key=lambda tup: int(tup[1]))
+        # print("sorted areas:",area_ls)
+        area_ls.reverse()
+        return area_ls
+
     for image in frame_dic["image_data_ls"]:
         #print("ty:",type(image),image)
         if(image != 'EMPTY_IMAGE_LS'):
@@ -22,6 +29,14 @@ def sort_areas(frame_dic):
 
 def sort_holes(frame_dic):
     hole_ls = []
+    if "image_data_ls" not in frame_dic.keys():
+        for entry in frame_dic["largest_holes"]:
+            hole_ls.append([entry[0], int(entry[1]), frame_dic['name']])
+        hole_ls = sorted(hole_ls, key=lambda tup: int(tup[1]))
+        hole_ls.reverse()
+        return hole_ls
+
+
     for image in frame_dic["image_data_ls"]:
         if (image != 'EMPTY_IMAGE_LS'):
             for entry in image["largest_holes"]:
@@ -36,8 +51,9 @@ def create_frame_area_table(frame_dic):
         html.Thead(html.Tr([html.Th("Pore Size"),
                             html.Th("Image Name"),
                             html.Th("(x,y)"),
-                            html.Th("Diameter of Largest Circle"),
-                            html.Th("center")]
+                            #html.Th("Diameter of Largest Circle"),
+                            #html.Th("center")
+                           ]
                            ))
     ]
     rows = []
@@ -48,8 +64,8 @@ def create_frame_area_table(frame_dic):
         row = html.Tr([html.Td(int(area[1])),
             html.Td(area[0]),
             html.Td("(" + str(area[2])+ "," + str(area[3]) +")"),
-            html.Td(str(round(area[5]*2*float(frame_dic["scale"]),2)) +px_str),
-            html.Td(str(area[4]))
+            #html.Td(str(round(area[5]*2*float(frame_dic["scale"]),2)) +px_str),
+            #html.Td(str(area[4]))
             ])
 
         rows.append(row)
@@ -96,23 +112,29 @@ def create_frame_pore_table(frame_dic):
     return table
 
 
-def create_frame_hole_table(frame_dic):
+def create_frame_hole_table(frame_dic,n=10):
     holes = sort_holes(frame_dic)
+
     scale = float(frame_dic['scale'])
+    if n==3:
+        key = "largest_holes"
+
     table_header = [
         html.Thead(html.Tr([
                             html.Th("Diameter(microns)"),
                             html.Th("center(px)"),
-                            html.Th("area(microns)"),
+                            #html.Th("area(microns)"),
                             html.Th("Image name")]
                            ))
     ]
     rows = [html.Tr([
             html.Td(round(hole[1] * 2 * scale,2)),
             html.Td('( ' + str(hole[0][0]) + ' ' + str(hole[0][1]) + ' )'),
-            html.Td(round((hole[1]*hole[1]) * 3.14 * scale * scale,2)),
+            # html.Td(round((hole[1]*hole[1]) * 3.14 * scale * scale,2)),
             html.Td(hole[2])
-            ]) for hole in holes[:10]]
+            ]) for hole in holes[:n]]
+
+
 
 
     table_body = [html.Tbody(rows)]

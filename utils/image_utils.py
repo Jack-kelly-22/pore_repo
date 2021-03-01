@@ -1,14 +1,15 @@
 from skimage.draw import set_color
 from skimage.io import imsave
-from skimage.draw import circle,circle_perimeter
+from skimage.draw import circle,circle_perimeter,rectangle_perimeter
 import random
 from numpy import array
-def color_out_image(regions,image,multi):
+def color_out_image(regions,image,multi,min=0,scale=2.5):
 
     for reg in regions:
         temp_set = {(1,0)}
         y_ls = []
         x_ls = []
+
         for pt in reg.coords:
             y_ls.append(pt[0])
             x_ls.append(pt[1])
@@ -21,10 +22,13 @@ def color_out_image(regions,image,multi):
         else:
             #r,g,b = 183,255,15
             r,g,b = 23,162,25
-
-        #if(len(reg.coords)>50):
-        set_color(image, (array(y_ls),array(x_ls)), color =(r,g,b))
+        scale = float(scale)
+        if(scale*scale*len(reg.coords)>(float(min))):
+            set_color(image, (array(y_ls),array(x_ls)), color =(r,g,b))
     return image
+
+
+
 
 def color_out_image_large_area(region,image,color=(255, 1, 1)):
         #ut = image
@@ -66,27 +70,19 @@ def color_holes(hole_ls, image):
         color_circle(hole[4],hole[5],image)
     return image
 
-
-def outline_included_area(all_areas):
-    boundary = []
-
-    #top side
-    i=0
-    j=0
-    go = True
-    while i<800:
-        j = 0
-        while j<600 and go :
-            if(i,j) in all_areas:
-                print("hit at ",i," ",j)
-                go = False
-                boundary.append((i,j))
-            j = j+1
-        i = i + 1
-    print("THIS IS BPUNDARY", boundary)
+def color_holes2(hole_ls, image):
+    for hole in hole_ls:
+        color_circle(hole[0],hole[1],image)
+    return image
 
 
+def add_boarder(image,boarder):
+    y, x, z = image.shape
+    for i in range(0, 5):
+        coords = rectangle_perimeter(start=(boarder//2 + i, boarder//2 + i), end=(y - boarder//2 + i, x - boarder//2 + i))
+        set_color(image, coords, (255, 0, 0))
 
+    return image
 
 
 def save_out_image(image,out_path):

@@ -113,6 +113,7 @@ def empty_frame_dic():
                 "hist_diam_img_path":'',
                 "disk_area_img_path" : '',
                 "disk_pore_img_path":'',
+                "heat_img_path": ''
 
         }
         return f_dat

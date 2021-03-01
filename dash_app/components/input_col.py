@@ -53,6 +53,21 @@ def get_input_col(pre,job=False):
         dbc.Input(id=pre + "-alt-thresh", placeholder="around 55-78", type="text", value='68'),
     ])
 
+    boarder = html.Div([
+        dbc.Col([
+
+            dbc.Row([
+            dbc.Label("Crop boarder?",),
+            dbc.Checkbox(id=pre+'-crop'),
+
+        ]),
+        dbc.Row([
+            html.H5("Boarder size: "),
+            dbc.Input(id=pre + '-boarder-size', value='10')
+        ])
+        ])
+    ])
+
     scale = html.Div([
         html.H5("Scale(microns/pixel)"),
         dbc.Input(id=pre + "-scale", placeholder="default is 55", type="text", value='2.6'),
@@ -71,14 +86,6 @@ def get_input_col(pre,job=False):
         ])
 
 
-
-    # constants_card = dbc.Card(children=[
-    #
-    # ]
-    # )
-
-
-
     run_button = dbc.Button("Run", id= pre +'-run')
     col_elems = [
         fiber_choice,
@@ -91,10 +98,14 @@ def get_input_col(pre,job=False):
         hr,
         scale,
         hr,
+        boarder,
+        hr,
         warn,
         hr,
         ignore,
+        hr,
         num,
+        hr,
         spreadsheet,
         hr,
         run_button
@@ -104,4 +115,4 @@ def get_input_col(pre,job=False):
         col_elems.append(preview)
     col = dbc.Col(col_elems)
 
-    return col
+    return dbc.Container(children=[col])

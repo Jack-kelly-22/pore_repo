@@ -76,4 +76,4 @@ class Job:
                       self.job_name,
                       self.tags)
             self.frame_ls.append(f)
-        print("frames have been finished")
+        #print("frames have been finished")
