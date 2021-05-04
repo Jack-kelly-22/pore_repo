@@ -1,0 +1,10 @@
+venv
+*.pyc
+.DS_Store
+.env
+dash_app/data/*
+tests
+/job-data/*
+/frames_folder/
+/Procfile
+/.idea/
